@@ -17,17 +17,11 @@ use photocraft_doc::{Affine, Document, Layer, LayerContent, LayerId, TextLayer};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
+use crate::vector_cmds::layer_id;
 use crate::{EngineError, Result, Session};
 
 fn has_doc(s: &Session) -> std::result::Result<(), String> {
     s.active().map(|_| ()).ok_or_else(|| "no document open".into())
-}
-
-fn layer_id(s: &Session, p: &Value) -> Result<LayerId> {
-    match p.get("layer").and_then(Value::as_u64) {
-        Some(id) => Ok(LayerId(id)),
-        None => s.active().and_then(|d| d.active_layer).ok_or(EngineError::Other("no active layer".into())),
-    }
 }
 
 fn bad(cmd: &str, msg: impl Into<String>) -> EngineError {
@@ -62,7 +56,7 @@ pub(crate) fn norm_text(s: &str) -> String {
     s.replace("\r\n", "\n").replace('\r', "\n")
 }
 
-fn byte_at(text: &str, ci: usize) -> usize {
+pub(crate) fn byte_at(text: &str, ci: usize) -> usize {
     text.char_indices().nth(ci).map_or(text.len(), |(b, _)| b)
 }
 
@@ -71,7 +65,7 @@ fn char_at(text: &str, bi: usize) -> usize {
 }
 
 /// `range: [start, end]` in characters → byte range (whole text when absent).
-fn range_param(text: &str, p: &Value) -> (usize, usize) {
+pub(crate) fn range_param(text: &str, p: &Value) -> (usize, usize) {
     match p.get("range").and_then(Value::as_array) {
         Some(r) if r.len() == 2 => {
             let a = r[0].as_u64().unwrap_or(0) as usize;
@@ -1163,7 +1157,7 @@ pub fn specs() -> Vec<CommandSpec> {
     ]
 }
 
-fn has_type_layer(s: &Session) -> std::result::Result<(), String> {
+pub(crate) fn has_type_layer(s: &Session) -> std::result::Result<(), String> {
     let st = s.active().ok_or("no document open")?;
     match st.active_layer.and_then(|id| st.doc.layer(id)) {
         Some(l) if matches!(l.content, LayerContent::Text(_)) => Ok(()),
