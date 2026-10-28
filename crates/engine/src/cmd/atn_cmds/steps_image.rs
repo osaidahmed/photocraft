@@ -133,6 +133,7 @@ const CALC_BLEND: &[(&str, &str)] = &[
 const SOURCE_CHANNELS: &[(&str, &str)] =
     &[("RGB", "composite"), ("CMYK", "composite"), ("Lab", "composite"), ("Trsp", "transparency"), ("Msk", "mask"), ("fsel", "selection")];
 
+/// The Apply Image command a recorded Apply Image step replays as.
 pub(super) fn apply_image_from(d: &Descriptor) -> Mapped {
     let unsupported = Mapped::Unsupported { harmless: false };
     let Some(with) = d.get_object("With") else { return unsupported };

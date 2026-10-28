@@ -17,6 +17,7 @@ pub(super) fn place_from(d: &Descriptor) -> Mapped {
     step(if d.get_bool("Lnkd") == Some(true) { "file.placeLinked" } else { "file.placeEmbedded" }, p)
 }
 
+/// The recorded Place step for a place command.
 pub(super) fn place_to(id: &str, p: &Value) -> Option<Descriptor> {
     let mut d = desc("null").with("null", path_value(jstr(p, "path")?)).with("FTcs", enm("QCSt", "Qcsa"));
     if let Some(s) = jnum(p, "scale") {
@@ -68,6 +69,7 @@ pub(super) fn save_from(d: &Descriptor) -> Mapped {
     step(if d.get_bool("Cpy ") == Some(true) { "file.saveACopy" } else { "file.saveAs" }, json!({"path": path}))
 }
 
+/// The recorded Save step for a save command.
 pub(super) fn save_to(id: &str, p: &Value) -> Option<Descriptor> {
     if id == "file.save" {
         return Some(desc("null"));
@@ -248,6 +250,7 @@ fn bitmap_to(p: &Value) -> Option<Descriptor> {
     Some(desc("null").with("T   ", D::Descriptor(desc("BtmM").with("Mthd", enm("Mthd", method)))))
 }
 
+/// The recorded Convert Mode step for a mode or depth command.
 pub(super) fn convert_mode_to(id: &str, p: &Value) -> Option<Descriptor> {
     Some(match id {
         "image.mode.bits8" => desc("null").with("Dpth", long(8.0)),
@@ -258,6 +261,7 @@ pub(super) fn convert_mode_to(id: &str, p: &Value) -> Option<Descriptor> {
     })
 }
 
+/// The Canvas Size command a recorded Canvas Size step replays as.
 pub(super) fn canvas_size_from(d: &Descriptor) -> Mapped {
     let mut p = Map::new();
     for (k, param) in [("Wdth", "width"), ("Hght", "height")] {
@@ -383,6 +387,7 @@ pub(super) fn image_size_from(d: &Descriptor) -> Mapped {
     step("image.imageSize", Value::Object(p))
 }
 
+/// The recorded Image Size step for an image size command.
 pub(super) fn image_size_to(_: &str, p: &Value) -> Option<Descriptor> {
     // Resolution only with Resample on imports as keep-print-size; a command without it cannot be told apart.
     if jnum(p, "resolution").is_some()
@@ -421,6 +426,7 @@ pub(super) fn image_size_to(_: &str, p: &Value) -> Option<Descriptor> {
     Some(d)
 }
 
+/// The Crop command a recorded Crop step replays as.
 pub(super) fn crop_from(d: &Descriptor) -> Mapped {
     let mut p = Map::new();
     if let Some(t) = d.get_object("To  ") {
@@ -447,6 +453,7 @@ pub(super) fn crop_from(d: &Descriptor) -> Mapped {
     step("image.crop", Value::Object(p))
 }
 
+/// The recorded Crop step for a crop command.
 pub(super) fn crop_to(_: &str, p: &Value) -> Option<Descriptor> {
     // The W x H x Resolution output options have no field here: refuse rather than export a plain
     // rectangle crop that keeps the old size and resolution on replay.
@@ -466,18 +473,22 @@ pub(super) fn crop_to(_: &str, p: &Value) -> Option<Descriptor> {
     Some(d)
 }
 
+/// The message and Continue choice of a recorded Stop step.
 pub(super) fn stop_from(d: &Descriptor) -> Mapped {
     step(STOP_MESSAGE, json!({"message": d.get_text("Msge").unwrap_or_default(), "allowContinue": d.get_bool("Cntn").unwrap_or(false)}))
 }
 
+/// The recorded Stop step for a stop command.
 pub(super) fn stop_to(_: &str, p: &Value) -> Option<Descriptor> {
     Some(desc("null").with("Msge", text(jstr(p, "message").unwrap_or(""))).with("Cntn", D::Boolean(jbool(p, "allowContinue").unwrap_or(false))))
 }
 
+/// Paste, or Paste In Place when the recorded step pastes in place.
 pub(super) fn paste_from(d: &Descriptor) -> Mapped {
     none(if d.get_bool("inPlace") == Some(true) { "edit.pasteSpecial.pasteInPlace" } else { "edit.paste" })
 }
 
+/// The recorded Paste step for a paste command.
 pub(super) fn paste_to(id: &str, _: &Value) -> Option<Descriptor> {
     let mut d = desc("null");
     if id == "edit.pasteSpecial.pasteInPlace" {
@@ -486,14 +497,17 @@ pub(super) fn paste_to(id: &str, _: &Value) -> Option<Descriptor> {
     Some(d.with("AntA", enm("Annt", "Anno")))
 }
 
+/// Merge Visible, or Stamp Visible when the recorded step keeps the layers.
 pub(super) fn merge_visible_from(d: &Descriptor) -> Mapped {
     none(if d.get_bool("Dplc") == Some(true) { "layer.stampVisible" } else { "layer.mergeVisible" })
 }
 
+/// The recorded Merge Visible step for a merge or stamp command.
 pub(super) fn merge_visible_to(id: &str, _: &Value) -> Option<Descriptor> {
     Some(if id == "layer.stampVisible" { desc("null").with("Dplc", D::Boolean(true)) } else { desc("null") })
 }
 
+/// The Align command a recorded Align step replays as.
 pub(super) fn align_from(d: &Descriptor) -> Mapped {
     match get_enum(d, "Usng").and_then(|u| lookup(ALIGN, &u)) {
         Some(a) => step(&format!("layer.align.{a}"), if d.get_bool("alignToCanvas") == Some(true) { json!({"to": "canvas"}) } else { json!({}) }),
@@ -517,6 +531,7 @@ pub(super) fn purge_to(id: &str, _: &Value) -> Option<Descriptor> {
     Some(desc("null").with("null", enm("PrgI", lookup_back(PURGE, id.strip_prefix("edit.purge.")?)?)))
 }
 
+/// Default Colors, the one Reset step that replays.
 pub(super) fn reset_from(d: &Descriptor) -> Mapped {
     match get_ref(d, "null").map(target) {
         Some(Target::Property(p)) if p == "Clrs" => none("tools.defaultColors"),
@@ -524,10 +539,12 @@ pub(super) fn reset_from(d: &Descriptor) -> Mapped {
     }
 }
 
+/// The recorded Reset step for the default colours command.
 pub(super) fn reset_to(_: &str, _: &Value) -> Option<Descriptor> {
     Some(desc("null").with("null", D::Reference(vec![ReferenceItem::Property { class: class("Clr "), key: Id::new("Clrs") }])))
 }
 
+/// The Assign or Convert to Profile command a recorded profile step replays as.
 pub(super) fn profile_from(d: &Descriptor, id: &str) -> Mapped {
     let name = d.get_text("T   ").or_else(|| d.get_text("profile"));
     let Some(profile) = name.as_deref().and_then(|n| lookup(PROFILES, n)) else { return Mapped::Unsupported { harmless: false } };

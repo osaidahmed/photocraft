@@ -169,10 +169,12 @@ pub(super) fn visibility_from(d: &Descriptor, id: &str) -> Mapped {
     if v.is_empty() { Mapped::Unsupported { harmless: false } } else { steps(v) }
 }
 
+/// The recorded Show or Hide step for a layer visibility command.
 pub(super) fn visibility_to(_: &str, p: &Value) -> Option<Descriptor> {
     Some(desc("null").with("null", D::List(vec![layer_ref(p)?])))
 }
 
+/// The command a recorded Move step replays as.
 pub(super) fn move_from(d: &Descriptor) -> Mapped {
     let Some(r) = get_ref(d, "null") else { return Mapped::Unsupported { harmless: false } };
     // The selection outline nudged.
@@ -230,6 +232,7 @@ pub(super) fn move_from(d: &Descriptor) -> Mapped {
     }
 }
 
+/// The recorded Move step for a move or arrange command.
 pub(super) fn move_to(id: &str, p: &Value) -> Option<Descriptor> {
     let ord = |o: &str| D::Reference(vec![ReferenceItem::Enumerated { class: class("Lyr "), type_id: code("Ordn"), value: code(o) }]);
     let t = match id {
@@ -251,6 +254,7 @@ pub(super) fn move_to(id: &str, p: &Value) -> Option<Descriptor> {
     Some(desc("null").with("null", layer_ref(p)?).with("T   ", t))
 }
 
+/// The command a recorded Duplicate step replays as.
 pub(super) fn duplicate_from(d: &Descriptor) -> Mapped {
     let Some(r) = get_ref(d, "null") else { return Mapped::Unsupported { harmless: false } };
     match ref_class(r).as_deref() {
@@ -320,6 +324,7 @@ pub(super) fn apply_comp_to(_: &str, p: &Value) -> Option<Descriptor> {
     Some(desc("null").with("null", name_ref("compsClass", jstr(p, "comp")?)))
 }
 
+/// The Play Action command a recorded Play step replays as.
 pub(super) fn play_from(d: &Descriptor) -> Mapped {
     match get_ref(d, "null").map(target) {
         Some(Target::Name(n)) => step("actions.play", json!({"action": clip_name(&n)})),
@@ -327,6 +332,7 @@ pub(super) fn play_from(d: &Descriptor) -> Mapped {
     }
 }
 
+/// The recorded Play step for a play action command.
 pub(super) fn play_to(_: &str, p: &Value) -> Option<Descriptor> {
     let name = jstr(p, "action")?;
     // The Play Action descriptor written here carries no starting step, so a call from a later step is not a whole call.
@@ -340,6 +346,7 @@ pub(super) fn play_to(_: &str, p: &Value) -> Option<Descriptor> {
     Some(desc("null").with("null", D::Reference(items)))
 }
 
+/// The command a recorded Fill or Paint Bucket step replays as.
 pub(super) fn fill_from(d: &Descriptor) -> Mapped {
     if let Some(from) = d.get_object("From") {
         // The Paint Bucket tool's click: its point is in pixels, or in percent of the canvas

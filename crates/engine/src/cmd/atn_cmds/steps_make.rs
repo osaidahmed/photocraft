@@ -59,6 +59,7 @@ const MASK_USING: &[(&str, &str)] = &[
     ("HdSl", "layer.layerMask.hideSelection"),
 ];
 
+/// Duplicate Layer into a new document, when the recorded Make step is one.
 fn duplicate_layer_from_descriptor(d: &Descriptor) -> Option<Mapped> {
     let r = get_ref(d, "null")?;
     if ref_class(r).as_deref() != Some("Dcmn") || !matches!(target(r), Target::Class) {
@@ -79,6 +80,7 @@ fn duplicate_layer_from_descriptor(d: &Descriptor) -> Option<Mapped> {
     Some(step("layer.duplicate", Value::Object(params)))
 }
 
+/// Add Layer Mask, when the recorded Make step makes a mask channel.
 fn mask_from_descriptor(d: &Descriptor) -> Option<Mapped> {
     let Some(D::Class(c)) = d.get("Nw  ") else { return None };
     if trimmed(&c.class_id) != "Chnl" {
@@ -92,6 +94,7 @@ fn mask_from_descriptor(d: &Descriptor) -> Option<Mapped> {
     })
 }
 
+/// New Document, when the recorded Make step makes one.
 fn new_document_from_descriptor(d: &Descriptor) -> Option<Mapped> {
     let nw = d.get_object("Nw  ")?;
     if get_enum(d, "Usng").as_deref() == Some("Slct") {
@@ -136,6 +139,7 @@ fn new_document_from_descriptor(d: &Descriptor) -> Option<Mapped> {
     Some(step("file.new", params))
 }
 
+/// The command a recorded Make step replays as.
 pub(super) fn make_from(d: &Descriptor) -> Mapped {
     if let Some(mapped) = duplicate_layer_from_descriptor(d) {
         return mapped;
@@ -326,6 +330,7 @@ pub(super) fn make_to(id: &str, p: &Value) -> Option<Descriptor> {
     })
 }
 
+/// The selection command a recorded Set Selection step replays as.
 fn selection_from(d: &Descriptor) -> Mapped {
     let unsupported = Mapped::Unsupported { harmless: false };
     match d.get("T   ") {
@@ -370,6 +375,7 @@ fn selection_from(d: &Descriptor) -> Mapped {
     }
 }
 
+/// Background from Layer or Layer from Background, as the recorded step converts.
 fn background_from(d: &Descriptor) -> Mapped {
     let unsupported = Mapped::Unsupported { harmless: false };
     // On an image that opened as a normal layer there is no Background to convert;
@@ -401,6 +407,7 @@ fn background_from(d: &Descriptor) -> Mapped {
     steps(v)
 }
 
+/// The command a recorded Set step replays as.
 pub(super) fn set_from(d: &Descriptor) -> Mapped {
     let Some(r) = get_ref(d, "null") else { return Mapped::Unsupported { harmless: false } };
     let unsupported = Mapped::Unsupported { harmless: false };
